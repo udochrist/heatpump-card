@@ -1,0 +1,446 @@
+/**
+ * Heat Pump Card
+ * A configurable custom Lovelace card for Home Assistant, styled in the
+ * spirit of HA's built-in Energy dashboard cards (bars, gauges, clean rows).
+ *
+ * Works with any entity source (open3e-ha / MQTT, ViCare integration, etc.)
+ * since you map your own entity IDs to semantic "channels" in the config.
+ * Nothing is hardcoded to a specific integration.
+ *
+ * --------------------------------------------------------------------
+ * Installation
+ * --------------------------------------------------------------------
+ * 1. Copy this file to <config>/www/heatpump-card.js
+ * 2. Settings -> Dashboards -> Resources -> Add Resource
+ *      URL:  /local/heatpump-card.js
+ *      Type: JavaScript Module
+ * 3. Add a card with type: custom:heatpump-card (see example YAML below,
+ *    or in the companion README).
+ *
+ * --------------------------------------------------------------------
+ * Minimal example
+ * --------------------------------------------------------------------
+ * type: custom:heatpump-card
+ * title: Heat Pump
+ * entities:
+ *   outdoor_temp: sensor.heatpump_outside_temperature
+ *   flow_temp: sensor.heatpump_flow_temperature
+ *   return_temp: sensor.heatpump_return_temperature
+ *   dhw_temp: sensor.heatpump_dhw_temperature
+ *   dhw_target_temp: sensor.heatpump_dhw_target_temperature
+ *   compressor_power:
+ *     entity: sensor.heatpump_compressor_power
+ *     max: 3000
+ *   heat_output:
+ *     entity: sensor.heatpump_heat_output
+ *     max: 8000
+ *   cop: sensor.heatpump_cop
+ *   compressor_speed: sensor.heatpump_compressor_speed
+ *   volume_flow: sensor.heatpump_volume_flow
+ *   mode: sensor.heatpump_operating_mode
+ *   state: sensor.heatpump_operating_state
+ *
+ * To split into separate per-aspect cards, add multiple card instances
+ * with the same entities block but different `sections:`, e.g.:
+ *   sections: [temperatures]
+ *   sections: [energy]
+ *   sections: [dhw]
+ *   sections: [status]
+ */
+
+const CARD_VERSION = "1.0.0";
+
+// Metadata describing each known "channel". Anything the user configures
+// under `entities` that isn't in this list is still rendered (as a plain
+// value row in the "status" section) so the card never silently drops
+// something you point it at.
+const CHANNELS = {
+  outdoor_temp: { section: "temperatures", label: "Outdoor", icon: "mdi:thermometer", type: "temp" },
+  flow_temp: { section: "temperatures", label: "Flow", icon: "mdi:thermometer-chevron-up", type: "temp" },
+  return_temp: { section: "temperatures", label: "Return", icon: "mdi:thermometer-chevron-down", type: "temp" },
+  room_temp: { section: "temperatures", label: "Room", icon: "mdi:home-thermometer-outline", type: "temp" },
+  target_flow_temp: { section: "temperatures", label: "Flow Target", icon: "mdi:target", type: "temp" },
+
+  dhw_temp: { section: "dhw", label: "Hot Water", icon: "mdi:water-thermometer", type: "temp" },
+  dhw_target_temp: { section: "dhw", label: "Hot Water Target", icon: "mdi:water-thermometer-outline", type: "temp" },
+
+  compressor_power: { section: "energy", label: "Compressor Power", icon: "mdi:flash", type: "bar", color: "#ff9800" },
+  heat_output: { section: "energy", label: "Heat Output", icon: "mdi:radiator", type: "bar", color: "#e64a19" },
+  cop: { section: "energy", label: "COP", icon: "mdi:gauge", type: "gauge", min: 0, max: 6 },
+  volume_flow: { section: "energy", label: "Volume Flow", icon: "mdi:pump", type: "value" },
+  energy_today: { section: "energy", label: "Energy Today", icon: "mdi:lightning-bolt", type: "value" },
+
+  compressor_speed: { section: "status", label: "Compressor Speed", icon: "mdi:speedometer", type: "percent" },
+  mode: { section: "status", label: "Mode", icon: "mdi:cog-outline", type: "text" },
+  state: { section: "status", label: "State", icon: "mdi:information-outline", type: "text", badge: true },
+  fault: { section: "status", label: "Fault", icon: "mdi:alert-circle-outline", type: "text" },
+};
+
+const SECTION_TITLES = {
+  temperatures: "Temperatures",
+  dhw: "Hot Water",
+  energy: "Energy & Performance",
+  status: "Status",
+};
+
+const SECTION_ORDER = ["temperatures", "dhw", "energy", "status"];
+
+// State-name -> accent colour, used for the header badge and the card's
+// left accent bar (loosely mirrors how the Energy dashboard colour-codes
+// flows). Extend/override via config.state_colors.
+const DEFAULT_STATE_COLORS = {
+  heating: "#e64a19",
+  heat: "#e64a19",
+  dhw: "#039be5",
+  hot_water: "#039be5",
+  defrost: "#8e24aa",
+  cooling: "#00acc1",
+  idle: "#9e9e9e",
+  off: "#9e9e9e",
+  standby: "#9e9e9e",
+};
+
+function fmt(value, decimals) {
+  if (value === undefined || value === null || Number.isNaN(value)) return "–";
+  if (typeof value !== "number") return String(value);
+  if (decimals === undefined) decimals = Math.abs(value) < 10 ? 1 : 0;
+  return value.toFixed(decimals);
+}
+
+class HeatpumpCard extends HTMLElement {
+  static getStubConfig() {
+    return {
+      title: "Heat Pump",
+      entities: {
+        outdoor_temp: "",
+        flow_temp: "",
+        return_temp: "",
+        dhw_temp: "",
+        dhw_target_temp: "",
+        compressor_power: "",
+        heat_output: "",
+        cop: "",
+        compressor_speed: "",
+        mode: "",
+        state: "",
+      },
+      sections: ["temperatures", "dhw", "energy", "status"],
+    };
+  }
+
+  setConfig(config) {
+    if (!config || !config.entities) {
+      throw new Error("heatpump-card: 'entities' is required in the card config");
+    }
+    this._config = config;
+    this._sections = (config.sections && config.sections.length)
+      ? config.sections.filter((s) => SECTION_ORDER.includes(s))
+      : SECTION_ORDER;
+    this._stateColors = Object.assign({}, DEFAULT_STATE_COLORS, config.state_colors || {});
+    this._built = false;
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    if (!this._built) {
+      this._buildStaticShell();
+      this._built = true;
+    }
+    this._render();
+  }
+
+  getCardSize() {
+    return 1 + this._sections.length * 2;
+  }
+
+  // ---- config normalisation -------------------------------------------
+
+  _channelDef(key) {
+    return CHANNELS[key] || { section: "status", label: key, icon: "mdi:help-circle-outline", type: "value" };
+  }
+
+  _channelConfig(key) {
+    const raw = this._config.entities[key];
+    if (raw === undefined || raw === null || raw === "") return null;
+    if (typeof raw === "string") return { entity: raw };
+    return raw; // object form: { entity, name, icon, unit, max, min, decimals }
+  }
+
+  _entries() {
+    return Object.keys(this._config.entities)
+      .map((key) => {
+        const cfg = this._channelConfig(key);
+        if (!cfg || !cfg.entity) return null;
+        const def = this._channelDef(key);
+        return { key, cfg, def };
+      })
+      .filter(Boolean);
+  }
+
+  // ---- shell (built once) ----------------------------------------------
+
+  _buildStaticShell() {
+    const root = document.createElement("style");
+    root.textContent = this._css();
+
+    const card = document.createElement("ha-card");
+    card.appendChild(root);
+
+    const header = document.createElement("div");
+    header.className = "hp-header";
+    header.innerHTML = `
+      <div class="hp-header-left">
+        <ha-icon class="hp-icon" icon="mdi:heat-pump-outline"></ha-icon>
+        <div class="hp-title">${this._config.title || "Heat Pump"}</div>
+      </div>
+      <div class="hp-badge" part="badge"></div>
+    `;
+    card.appendChild(header);
+
+    const body = document.createElement("div");
+    body.className = "hp-body";
+    card.appendChild(body);
+    this._bodyEl = body;
+    this._badgeEl = header.querySelector(".hp-badge");
+    this._cardEl = card;
+
+    this.innerHTML = "";
+    this.appendChild(card);
+
+    // Build one container per configured section, in fixed order, and
+    // remember refs so re-render just updates values, not DOM structure.
+    this._sectionEls = {};
+    this._rowEls = {};
+    for (const section of this._sections) {
+      const wrap = document.createElement("div");
+      wrap.className = "hp-section";
+      const h = document.createElement("div");
+      h.className = "hp-section-title";
+      h.textContent = SECTION_TITLES[section] || section;
+      wrap.appendChild(h);
+      const rows = document.createElement("div");
+      rows.className = "hp-rows";
+      wrap.appendChild(rows);
+      body.appendChild(wrap);
+      this._sectionEls[section] = { wrap, rows };
+    }
+  }
+
+  // ---- render (every hass update) ---------------------------------------
+
+  _render() {
+    if (!this._hass) return;
+    const entries = this._entries();
+
+    // group by section, preserving config key order within a section
+    const bySection = {};
+    for (const e of entries) {
+      const section = this._sections.includes(e.def.section) ? e.def.section : this._sections[0];
+      (bySection[section] = bySection[section] || []).push(e);
+    }
+
+    // header badge: prefer explicit "state" channel
+    const stateEntry = entries.find((e) => e.key === "state");
+    let badgeText = "";
+    let accent = "var(--primary-color)";
+    if (stateEntry) {
+      const st = this._hass.states[stateEntry.cfg.entity];
+      if (st) {
+        badgeText = this._hass.formatEntityState
+          ? this._hass.formatEntityState(st)
+          : st.state;
+        const norm = (st.state || "").toLowerCase().replace(/\s+/g, "_");
+        accent = this._stateColors[norm] || accent;
+      }
+    }
+    this._badgeEl.textContent = badgeText;
+    this._badgeEl.style.color = accent;
+    this._badgeEl.style.borderColor = accent;
+    this._cardEl.style.setProperty("--hp-accent", accent);
+
+    for (const section of this._sections) {
+      const { wrap, rows } = this._sectionEls[section];
+      const list = bySection[section] || [];
+      wrap.style.display = list.length ? "" : "none";
+      rows.innerHTML = "";
+      for (const entry of list) {
+        rows.appendChild(this._renderRow(entry));
+      }
+    }
+  }
+
+  _renderRow(entry) {
+    const { cfg, def } = entry;
+    const stateObj = this._hass.states[cfg.entity];
+    const icon = cfg.icon || def.icon;
+    const label = cfg.name || def.label;
+    const row = document.createElement("div");
+    row.className = "hp-row";
+    row.title = cfg.entity;
+    row.addEventListener("click", () => this._moreInfo(cfg.entity));
+
+    if (!stateObj) {
+      row.classList.add("hp-unavailable");
+      row.innerHTML = `
+        <ha-icon icon="${icon}"></ha-icon>
+        <div class="hp-row-label">${label}</div>
+        <div class="hp-row-value">not found</div>
+      `;
+      return row;
+    }
+
+    const numeric = parseFloat(stateObj.state);
+    const hasNumeric = !Number.isNaN(numeric);
+    const unit = cfg.unit || stateObj.attributes.unit_of_measurement || "";
+    const decimals = cfg.decimals;
+
+    let valueHtml = "";
+    let extraHtml = "";
+
+    switch (def.type) {
+      case "temp": {
+        valueHtml = `<span class="hp-num">${fmt(numeric, decimals)}</span><span class="hp-unit">${unit || "°C"}</span>`;
+        break;
+      }
+      case "percent": {
+        const pct = hasNumeric ? Math.max(0, Math.min(100, numeric)) : 0;
+        valueHtml = `<span class="hp-num">${fmt(numeric, decimals !== undefined ? decimals : 0)}</span><span class="hp-unit">${unit || "%"}</span>`;
+        extraHtml = `<div class="hp-bar-track"><div class="hp-bar-fill" style="width:${pct}%;background:var(--hp-accent)"></div></div>`;
+        break;
+      }
+      case "bar": {
+        const max = cfg.max !== undefined ? cfg.max : (def.max || 100);
+        const pct = hasNumeric && max > 0 ? Math.max(0, Math.min(100, (numeric / max) * 100)) : 0;
+        const color = cfg.color || def.color || "var(--hp-accent)";
+        valueHtml = `<span class="hp-num">${fmt(numeric, decimals)}</span><span class="hp-unit">${unit}</span>`;
+        extraHtml = `<div class="hp-bar-track"><div class="hp-bar-fill" style="width:${pct}%;background:${color}"></div></div>`;
+        break;
+      }
+      case "gauge": {
+        const min = cfg.min !== undefined ? cfg.min : (def.min || 0);
+        const max = cfg.max !== undefined ? cfg.max : (def.max || 6);
+        const pct = hasNumeric ? Math.max(0, Math.min(100, ((numeric - min) / (max - min)) * 100)) : 0;
+        const color = numeric >= (cfg.good || 3.5) ? "#43a047" : numeric >= (cfg.ok || 2) ? "#fb8c00" : "#e53935";
+        valueHtml = `<span class="hp-num" style="color:${hasNumeric ? color : "inherit"}">${fmt(numeric, decimals !== undefined ? decimals : 2)}</span><span class="hp-unit">${unit}</span>`;
+        extraHtml = `<div class="hp-bar-track"><div class="hp-bar-fill" style="width:${pct}%;background:${color}"></div></div>`;
+        break;
+      }
+      case "text": {
+        const display = this._hass.formatEntityState ? this._hass.formatEntityState(stateObj) : stateObj.state;
+        if (def.badge) {
+          const norm = (stateObj.state || "").toLowerCase().replace(/\s+/g, "_");
+          const color = this._stateColors[norm];
+          valueHtml = color
+            ? `<span class="hp-pill" style="background:${color}22;color:${color}">${display}</span>`
+            : `<span class="hp-num">${display}</span>`;
+        } else {
+          valueHtml = `<span class="hp-num">${display}</span>`;
+        }
+        break;
+      }
+      default: {
+        const display = hasNumeric ? fmt(numeric, decimals) : (this._hass.formatEntityState ? this._hass.formatEntityState(stateObj) : stateObj.state);
+        valueHtml = `<span class="hp-num">${display}</span><span class="hp-unit">${hasNumeric ? unit : ""}</span>`;
+      }
+    }
+
+    row.innerHTML = `
+      <ha-icon icon="${icon}"></ha-icon>
+      <div class="hp-row-main">
+        <div class="hp-row-top">
+          <div class="hp-row-label">${label}</div>
+          <div class="hp-row-value">${valueHtml}</div>
+        </div>
+        ${extraHtml}
+      </div>
+    `;
+    return row;
+  }
+
+  _moreInfo(entityId) {
+    const event = new Event("hass-more-info", { bubbles: true, composed: true });
+    event.detail = { entityId };
+    this.dispatchEvent(event);
+  }
+
+  _css() {
+    return `
+      ha-card {
+        padding: 0;
+        overflow: hidden;
+        border-radius: var(--ha-card-border-radius, 12px);
+      }
+      .hp-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--divider-color, rgba(0,0,0,0.08));
+      }
+      .hp-header-left { display: flex; align-items: center; gap: 8px; }
+      .hp-icon { color: var(--hp-accent, var(--primary-color)); --mdc-icon-size: 22px; }
+      .hp-title { font-size: 16px; font-weight: 500; color: var(--primary-text-color); }
+      .hp-badge {
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: .03em;
+        padding: 2px 10px;
+        border-radius: 999px;
+        border: 1px solid currentColor;
+      }
+      .hp-body { padding: 4px 16px 12px; }
+      .hp-section { margin-top: 10px; }
+      .hp-section-title {
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        color: var(--secondary-text-color);
+        margin: 8px 0 4px;
+      }
+      .hp-rows { display: flex; flex-direction: column; }
+      .hp-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 7px 4px;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+      .hp-row:hover { background: var(--secondary-background-color); }
+      .hp-row ha-icon { color: var(--paper-item-icon-color, #808080); flex: none; }
+      .hp-row-main { flex: 1; min-width: 0; }
+      .hp-row-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+      .hp-row-label { color: var(--primary-text-color); font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .hp-row-value { font-size: 14px; white-space: nowrap; }
+      .hp-num { font-weight: 600; color: var(--primary-text-color); }
+      .hp-unit { font-size: 12px; color: var(--secondary-text-color); margin-left: 2px; }
+      .hp-pill { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
+      .hp-bar-track {
+        margin-top: 4px;
+        height: 6px;
+        border-radius: 3px;
+        background: var(--secondary-background-color, #e0e0e0);
+        overflow: hidden;
+      }
+      .hp-bar-fill { height: 100%; border-radius: 3px; transition: width .3s ease; }
+      .hp-unavailable .hp-row-value { color: var(--secondary-text-color); font-style: italic; }
+    `;
+  }
+}
+
+customElements.define("heatpump-card", HeatpumpCard);
+
+window.customCards = window.customCards || [];
+window.customCards.push({
+  type: "heatpump-card",
+  name: "Heat Pump Card",
+  description: "Configurable dashboard card for any heat pump (temperatures, energy/COP, DHW, status). Works with any entity source (open3e-ha, ViCare, generic MQTT, template sensors, etc.).",
+});
+
+console.info(
+  `%c HEATPUMP-CARD %c v${CARD_VERSION} `,
+  "color: white; background: #e64a19; font-weight: 700;",
+  "color: #e64a19; background: transparent; font-weight: 700;"
+);
