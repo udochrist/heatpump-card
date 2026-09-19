@@ -16,6 +16,8 @@ visualization whenever `compressor_power` or `heat_output` is configured. It
 shows electricity and ambient outdoor energy flowing into the heat pump, then
 delivered heat flowing to the home. Flow widths are proportional to the
 readings; ambient energy is estimated as `heat_output - compressor_power`.
+The heat pump is split into compressor and heat exchanger nodes, with the
+`flow_temp` channel shown on the refrigerant flow between them.
 
 ---
 
