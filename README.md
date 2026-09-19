@@ -11,10 +11,11 @@ This folder is a self-contained HACS "plugin" repository (`hacs.json` +
 the card + this README), so it installs like any other custom card
 instead of being a manual file copy.
 
-The energy section includes a live power-flow visualization whenever
-`compressor_power` or `heat_output` is configured. It shows outdoor air,
-electricity input, the heat pump, and delivered heat; directional animation
-pauses naturally when a reading is unavailable or zero.
+The energy section includes a live, Energy-dashboard-style power-flow
+visualization whenever `compressor_power` or `heat_output` is configured. It
+shows electricity and ambient outdoor energy flowing into the heat pump, then
+delivered heat flowing to the home. Flow widths are proportional to the
+readings; ambient energy is estimated as `heat_output - compressor_power`.
 
 ---
 

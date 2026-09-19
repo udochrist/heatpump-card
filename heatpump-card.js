@@ -376,8 +376,8 @@ class HeatpumpCard extends HTMLElement {
       const numeric = parseFloat(stateObj.state);
       if (Number.isNaN(numeric)) return null;
       return {
+        numeric,
         text: `${fmt(numeric, entry.cfg.decimals)} ${entry.cfg.unit || stateObj.attributes.unit_of_measurement || "W"}`,
-        active: numeric > 0,
       };
     };
 
@@ -393,34 +393,45 @@ class HeatpumpCard extends HTMLElement {
       ? `${fmt(parseFloat(outdoorState.state), outdoorEntry.cfg.decimals)} ${outdoorEntry.cfg.unit || outdoorState.attributes.unit_of_measurement || "°C"}`
       : "Outdoor air";
 
-    const destination = getEntry("dhw_temp") ? "Home + hot water" : "Home heating";
+    const ambientPower = compressor && heat ? Math.max(0, heat.numeric - compressor.numeric) : null;
+    const powerUnit = (getEntry("heat_output") && (getEntry("heat_output").cfg.unit || "W")) || "W";
+    const ambientText = ambientPower === null ? "No reading" : `${fmt(ambientPower)} ${powerUnit}`;
+    const hasDhw = Boolean(getEntry("dhw_temp"));
+    const heatingText = heat ? heat.text : "No reading";
+    const total = Math.max(heat ? heat.numeric : 0, compressor ? compressor.numeric : 0, 1);
+    const strokeWidth = (value) => Math.max(2, Math.min(11, (value / total) * 11));
+    const electricWidth = compressor ? strokeWidth(compressor.numeric) : 2;
+    const ambientWidth = ambientPower === null ? 2 : strokeWidth(ambientPower);
+    const outputWidth = heat ? strokeWidth(heat.numeric) : 2;
+    const activeClass = (value) => value > 0 ? " hp-flow-active" : "";
     this._flowEl.innerHTML = `
       <div class="hp-flow-heading">Power flow</div>
       <div class="hp-flow-diagram">
-        <div class="hp-flow-node hp-flow-source">
+        <svg class="hp-flow-links" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <path class="hp-flow-link hp-flow-electric-link${activeClass(compressor ? compressor.numeric : 0)}" style="--flow-width:${electricWidth}" d="M 22 25 C 31 25, 34 42, 43 48" />
+          <path class="hp-flow-link hp-flow-ambient-link${activeClass(ambientPower || 0)}" style="--flow-width:${ambientWidth}" d="M 22 75 C 31 75, 34 58, 43 52" />
+          <path class="hp-flow-link hp-flow-output-link${activeClass(heat ? heat.numeric : 0)}" style="--flow-width:${outputWidth}" d="M 57 50 C 66 50, 69 25, 78 25" />
+        </svg>
+        <div class="hp-flow-node hp-flow-electricity">
+          <ha-icon icon="mdi:transmission-tower"></ha-icon>
+          <span>Electricity</span>
+          <strong>${compressor ? compressor.text : "No reading"}</strong>
+        </div>
+        <div class="hp-flow-node hp-flow-outdoor">
           <ha-icon icon="mdi:weather-windy"></ha-icon>
           <span>Outdoor air</span>
           <strong>${outdoorValue}</strong>
+          <small>${ambientText}</small>
         </div>
-        <div class="hp-flow-connector hp-flow-air ${compressor && compressor.active ? "hp-flow-active" : ""}"><span></span></div>
         <div class="hp-flow-node hp-flow-pump">
           <ha-icon icon="mdi:heat-pump-outline"></ha-icon>
           <span>Heat pump</span>
-          <strong>${heat ? heat.text : "No heat output"}</strong>
+          <strong>${heat ? `COP ${fmt(heat.numeric / Math.max(compressor ? compressor.numeric : 1, 1), 1)}` : "No reading"}</strong>
         </div>
-        <div class="hp-flow-connector hp-flow-output ${heat && heat.active ? "hp-flow-active" : ""}"><span></span></div>
-        <div class="hp-flow-node hp-flow-destination">
+        <div class="hp-flow-node hp-flow-heating">
           <ha-icon icon="mdi:home-thermometer-outline"></ha-icon>
-          <span>${destination}</span>
-          <strong>${heat ? heat.text : "No reading"}</strong>
-        </div>
-        <div class="hp-flow-electric">
-          <div class="hp-flow-node hp-flow-input">
-            <ha-icon icon="mdi:transmission-tower"></ha-icon>
-            <span>Electricity</span>
-            <strong>${compressor ? compressor.text : "No reading"}</strong>
-          </div>
-          <div class="hp-flow-connector hp-flow-power ${compressor && compressor.active ? "hp-flow-active" : ""}"><span></span></div>
+          <span>${hasDhw ? "Home + hot water" : "Space heating"}</span>
+          <strong>${heatingText}</strong>
         </div>
       </div>
     `;
@@ -511,12 +522,15 @@ class HeatpumpCard extends HTMLElement {
         text-transform: uppercase;
       }
       .hp-flow-diagram {
-        display: grid;
-        grid-template-columns: minmax(78px, 1fr) 26px minmax(92px, 1.15fr) 26px minmax(88px, 1fr);
-        grid-template-rows: auto 42px;
-        align-items: center;
+        min-height: 158px;
         position: relative;
       }
+      .hp-flow-links { height: 100%; left: 0; overflow: visible; position: absolute; top: 0; width: 100%; }
+      .hp-flow-link { fill: none; stroke: var(--divider-color, #bdbdbd); stroke-linecap: round; stroke-width: var(--flow-width, 2); vector-effect: non-scaling-stroke; }
+      .hp-flow-electric-link { stroke: #ff9800; }
+      .hp-flow-ambient-link { stroke: #039be5; }
+      .hp-flow-output-link { stroke: #e64a19; }
+      .hp-flow-active { stroke-dasharray: 2 4; animation: hp-flow-move .8s linear infinite; }
       .hp-flow-node {
         align-items: center;
         background: var(--card-background-color, var(--ha-card-background, #fff));
@@ -527,29 +541,27 @@ class HeatpumpCard extends HTMLElement {
         gap: 3px;
         min-width: 0;
         padding: 8px 5px;
+        position: absolute;
         text-align: center;
+        transform: translate(-50%, -50%);
+        width: 25%;
+        z-index: 1;
       }
       .hp-flow-node ha-icon { color: var(--hp-accent, var(--primary-color)); --mdc-icon-size: 20px; }
       .hp-flow-node span { color: var(--secondary-text-color); font-size: 10px; line-height: 1.15; }
       .hp-flow-node strong { color: var(--primary-text-color); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
-      .hp-flow-source { grid-column: 1; grid-row: 1; }
-      .hp-flow-pump { border-color: var(--hp-accent, var(--primary-color)); grid-column: 3; grid-row: 1; }
-      .hp-flow-destination { grid-column: 5; grid-row: 1; }
-      .hp-flow-connector { height: 3px; position: relative; }
-      .hp-flow-connector span { background: var(--divider-color, #bdbdbd); border-radius: 3px; display: block; height: 100%; position: relative; width: 100%; }
-      .hp-flow-connector span::after { border-bottom: 5px solid transparent; border-left: 6px solid var(--divider-color, #bdbdbd); border-top: 5px solid transparent; content: ""; position: absolute; right: -1px; top: -4px; }
-      .hp-flow-active span { background: var(--hp-flow-color, var(--hp-accent, #e64a19)); background-image: linear-gradient(90deg, transparent 0 35%, rgba(255,255,255,.65) 35% 55%, transparent 55%); background-size: 16px 100%; animation: hp-flow-move .8s linear infinite; }
-      .hp-flow-active span::after { border-left-color: var(--hp-flow-color, var(--hp-accent, #e64a19)); }
-      .hp-flow-air { grid-column: 2; grid-row: 1; --hp-flow-color: #039be5; }
-      .hp-flow-output { grid-column: 4; grid-row: 1; --hp-flow-color: #e64a19; }
-      .hp-flow-electric { align-items: center; display: flex; flex-direction: column; grid-column: 3; grid-row: 2; justify-self: center; width: 100%; }
-      .hp-flow-input { min-width: 92px; padding: 6px 8px; }
-      .hp-flow-power { height: 20px; transform: rotate(90deg); width: 24px; --hp-flow-color: #ff9800; }
-      @keyframes hp-flow-move { to { background-position: 16px 0; } }
-      @media (prefers-reduced-motion: reduce) { .hp-flow-active span { animation: none; } }
+      .hp-flow-node small { color: var(--secondary-text-color); font-size: 10px; }
+      .hp-flow-electricity { left: 13%; top: 25%; }
+      .hp-flow-outdoor { left: 13%; top: 75%; }
+      .hp-flow-pump { border-color: var(--hp-accent, var(--primary-color)); left: 50%; top: 50%; width: 27%; }
+      .hp-flow-heating { left: 87%; top: 25%; }
+      @keyframes hp-flow-move { to { stroke-dashoffset: -6; } }
+      @media (prefers-reduced-motion: reduce) { .hp-flow-active { animation: none; } }
       @media (max-width: 360px) {
         .hp-flow { padding: 8px 5px; }
-        .hp-flow-diagram { grid-template-columns: minmax(62px, 1fr) 14px minmax(78px, 1.15fr) 14px minmax(68px, 1fr); }
+        .hp-flow-diagram { min-height: 145px; }
+        .hp-flow-node { width: 28%; }
+        .hp-flow-pump { width: 30%; }
         .hp-flow-node span { font-size: 9px; }
         .hp-flow-node strong { font-size: 10px; }
       }
