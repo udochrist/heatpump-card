@@ -220,6 +220,12 @@ class HeatpumpCard extends HTMLElement {
       wrap.appendChild(h);
       const rows = document.createElement("div");
       rows.className = "hp-rows";
+      if (section === "energy") {
+        const flow = document.createElement("div");
+        flow.className = "hp-flow";
+        wrap.appendChild(flow);
+        this._flowEl = flow;
+      }
       wrap.appendChild(rows);
       body.appendChild(wrap);
       this._sectionEls[section] = { wrap, rows };
@@ -257,6 +263,7 @@ class HeatpumpCard extends HTMLElement {
     this._badgeEl.style.color = accent;
     this._badgeEl.style.borderColor = accent;
     this._cardEl.style.setProperty("--hp-accent", accent);
+    this._renderFlow(entries);
 
     for (const section of this._sections) {
       const { wrap, rows } = this._sectionEls[section];
@@ -357,6 +364,68 @@ class HeatpumpCard extends HTMLElement {
     return row;
   }
 
+  _renderFlow(entries) {
+    if (!this._flowEl) return;
+
+    const getEntry = (key) => entries.find((entry) => entry.key === key);
+    const getValue = (key) => {
+      const entry = getEntry(key);
+      if (!entry) return null;
+      const stateObj = this._hass.states[entry.cfg.entity];
+      if (!stateObj || stateObj.state === "unavailable" || stateObj.state === "unknown") return null;
+      const numeric = parseFloat(stateObj.state);
+      if (Number.isNaN(numeric)) return null;
+      return {
+        text: `${fmt(numeric, entry.cfg.decimals)} ${entry.cfg.unit || stateObj.attributes.unit_of_measurement || "W"}`,
+        active: numeric > 0,
+      };
+    };
+
+    const compressor = getValue("compressor_power");
+    const heat = getValue("heat_output");
+    const hasFlowData = compressor || heat;
+    this._flowEl.style.display = hasFlowData ? "" : "none";
+    if (!hasFlowData) return;
+
+    const outdoorEntry = getEntry("outdoor_temp");
+    const outdoorState = outdoorEntry ? this._hass.states[outdoorEntry.cfg.entity] : null;
+    const outdoorValue = outdoorState && !Number.isNaN(parseFloat(outdoorState.state))
+      ? `${fmt(parseFloat(outdoorState.state), outdoorEntry.cfg.decimals)} ${outdoorEntry.cfg.unit || outdoorState.attributes.unit_of_measurement || "°C"}`
+      : "Outdoor air";
+
+    const destination = getEntry("dhw_temp") ? "Home + hot water" : "Home heating";
+    this._flowEl.innerHTML = `
+      <div class="hp-flow-heading">Power flow</div>
+      <div class="hp-flow-diagram">
+        <div class="hp-flow-node hp-flow-source">
+          <ha-icon icon="mdi:weather-windy"></ha-icon>
+          <span>Outdoor air</span>
+          <strong>${outdoorValue}</strong>
+        </div>
+        <div class="hp-flow-connector hp-flow-air ${compressor && compressor.active ? "hp-flow-active" : ""}"><span></span></div>
+        <div class="hp-flow-node hp-flow-pump">
+          <ha-icon icon="mdi:heat-pump-outline"></ha-icon>
+          <span>Heat pump</span>
+          <strong>${heat ? heat.text : "No heat output"}</strong>
+        </div>
+        <div class="hp-flow-connector hp-flow-output ${heat && heat.active ? "hp-flow-active" : ""}"><span></span></div>
+        <div class="hp-flow-node hp-flow-destination">
+          <ha-icon icon="mdi:home-thermometer-outline"></ha-icon>
+          <span>${destination}</span>
+          <strong>${heat ? heat.text : "No reading"}</strong>
+        </div>
+        <div class="hp-flow-electric">
+          <div class="hp-flow-node hp-flow-input">
+            <ha-icon icon="mdi:transmission-tower"></ha-icon>
+            <span>Electricity</span>
+            <strong>${compressor ? compressor.text : "No reading"}</strong>
+          </div>
+          <div class="hp-flow-connector hp-flow-power ${compressor && compressor.active ? "hp-flow-active" : ""}"><span></span></div>
+        </div>
+      </div>
+    `;
+  }
+
   _moreInfo(entityId) {
     const event = new Event("hass-more-info", { bubbles: true, composed: true });
     event.detail = { entityId };
@@ -426,6 +495,64 @@ class HeatpumpCard extends HTMLElement {
       }
       .hp-bar-fill { height: 100%; border-radius: 3px; transition: width .3s ease; }
       .hp-unavailable .hp-row-value { color: var(--secondary-text-color); font-style: italic; }
+      .hp-flow {
+        margin: 4px 0 14px;
+        padding: 12px;
+        border: 1px solid var(--divider-color, rgba(0,0,0,0.08));
+        border-radius: 10px;
+        background: color-mix(in srgb, var(--secondary-background-color, #f5f5f5) 55%, transparent);
+      }
+      .hp-flow-heading {
+        color: var(--secondary-text-color);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: .06em;
+        margin-bottom: 10px;
+        text-transform: uppercase;
+      }
+      .hp-flow-diagram {
+        display: grid;
+        grid-template-columns: minmax(78px, 1fr) 26px minmax(92px, 1.15fr) 26px minmax(88px, 1fr);
+        grid-template-rows: auto 42px;
+        align-items: center;
+        position: relative;
+      }
+      .hp-flow-node {
+        align-items: center;
+        background: var(--card-background-color, var(--ha-card-background, #fff));
+        border: 1px solid var(--divider-color, rgba(0,0,0,0.1));
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        min-width: 0;
+        padding: 8px 5px;
+        text-align: center;
+      }
+      .hp-flow-node ha-icon { color: var(--hp-accent, var(--primary-color)); --mdc-icon-size: 20px; }
+      .hp-flow-node span { color: var(--secondary-text-color); font-size: 10px; line-height: 1.15; }
+      .hp-flow-node strong { color: var(--primary-text-color); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+      .hp-flow-source { grid-column: 1; grid-row: 1; }
+      .hp-flow-pump { border-color: var(--hp-accent, var(--primary-color)); grid-column: 3; grid-row: 1; }
+      .hp-flow-destination { grid-column: 5; grid-row: 1; }
+      .hp-flow-connector { height: 3px; position: relative; }
+      .hp-flow-connector span { background: var(--divider-color, #bdbdbd); border-radius: 3px; display: block; height: 100%; position: relative; width: 100%; }
+      .hp-flow-connector span::after { border-bottom: 5px solid transparent; border-left: 6px solid var(--divider-color, #bdbdbd); border-top: 5px solid transparent; content: ""; position: absolute; right: -1px; top: -4px; }
+      .hp-flow-active span { background: var(--hp-flow-color, var(--hp-accent, #e64a19)); background-image: linear-gradient(90deg, transparent 0 35%, rgba(255,255,255,.65) 35% 55%, transparent 55%); background-size: 16px 100%; animation: hp-flow-move .8s linear infinite; }
+      .hp-flow-active span::after { border-left-color: var(--hp-flow-color, var(--hp-accent, #e64a19)); }
+      .hp-flow-air { grid-column: 2; grid-row: 1; --hp-flow-color: #039be5; }
+      .hp-flow-output { grid-column: 4; grid-row: 1; --hp-flow-color: #e64a19; }
+      .hp-flow-electric { align-items: center; display: flex; flex-direction: column; grid-column: 3; grid-row: 2; justify-self: center; width: 100%; }
+      .hp-flow-input { min-width: 92px; padding: 6px 8px; }
+      .hp-flow-power { height: 20px; transform: rotate(90deg); width: 24px; --hp-flow-color: #ff9800; }
+      @keyframes hp-flow-move { to { background-position: 16px 0; } }
+      @media (prefers-reduced-motion: reduce) { .hp-flow-active span { animation: none; } }
+      @media (max-width: 360px) {
+        .hp-flow { padding: 8px 5px; }
+        .hp-flow-diagram { grid-template-columns: minmax(62px, 1fr) 14px minmax(78px, 1.15fr) 14px minmax(68px, 1fr); }
+        .hp-flow-node span { font-size: 9px; }
+        .hp-flow-node strong { font-size: 10px; }
+      }
     `;
   }
 }
