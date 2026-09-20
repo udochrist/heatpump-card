@@ -70,8 +70,8 @@ const CHANNELS = {
   volume_flow: { section: "energy", label: "Volume Flow", icon: "mdi:pump", type: "value" },
   energy_today: { section: "energy", label: "Energy Today", icon: "mdi:lightning-bolt", type: "value" },
 
-  compressor_speed: { section: "status", label: "Compressor Speed", icon: "mdi:speedometer", type: "percent" },
-  mode: { section: "status", label: "Mode", icon: "mdi:cog-outline", type: "text" },
+  compressor_speed: { section: "energy", label: "Compressor Speed", icon: "mdi:speedometer", type: "percent" },
+  mode: { section: "energy", label: "Mode", icon: "mdi:cog-outline", type: "text" },
   valve_position: { section: "status", label: "Valve Position", icon: "mdi:valve", type: "text" },
   state: { section: "status", label: "State", icon: "mdi:information-outline", type: "text", badge: true },
   fault: { section: "status", label: "Fault", icon: "mdi:alert-circle-outline", type: "text" },

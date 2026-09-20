@@ -78,8 +78,8 @@ entities:
 | `heat_output` | energy | bar (needs `max`, watts) |
 | `cop` | energy | small gauge, color-coded (red <2, orange 2–3.5, green ≥3.5) |
 | `volume_flow`, `energy_today` | energy | plain value |
-| `compressor_speed` | status | percent bar |
-| `mode` | status | plain text |
+| `compressor_speed` | energy | percent bar |
+| `mode` | energy | plain text |
 | `state` | status | colored pill **and** drives the card's header badge/accent color |
 | `fault` | status | plain text |
 

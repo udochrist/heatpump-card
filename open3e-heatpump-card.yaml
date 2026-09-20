@@ -28,6 +28,8 @@ entities:
     unit: °C
 
   # Energy and performance
+  compressor_speed: sensor.vitocal_SERIAL_NUMBER_compressor_speed_percentage
+  mode: sensor.vitocal_SERIAL_NUMBER_refrigeration_circuit_mode
   compressor_power:
     entity: sensor.vitocal_SERIAL_NUMBER_power_consumption_refrigerant_circuit
     max: 8000
@@ -43,8 +45,6 @@ entities:
     unit: L/h
 
   # Operating status
-  compressor_speed: sensor.vitocal_SERIAL_NUMBER_compressor_speed_percentage
-  mode: sensor.vitocal_SERIAL_NUMBER_refrigeration_circuit_mode
   valve_position: sensor.vitocal_SERIAL_NUMBER_four_three_way_valve_position
   state: sensor.vitocal_SERIAL_NUMBER_domestic_hot_water_status
   fault: sensor.vitocal_SERIAL_NUMBER_error_dtc_list
