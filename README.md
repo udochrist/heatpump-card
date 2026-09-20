@@ -51,7 +51,7 @@ repository**:
 ```yaml
 type: custom:heatpump-card
 title: Heat Pump                  # optional
-sections: [temperatures, dhw, energy, status]   # optional, default: all four
+sections: [temperatures, dhw, energy, status, visualization]   # optional, default: all five
 state_colors:                     # optional, overrides/extends defaults
   heating: "#e64a19"
   dhw: "#039be5"
@@ -82,6 +82,9 @@ entities:
 | `mode` | status | plain text |
 | `state` | status | colored pill **and** drives the card's header badge/accent color |
 | `fault` | status | plain text |
+
+The `visualization` section contains the power-flow diagram. It is shown only
+when that section is active and the configured power sensors have numeric data.
 
 Any key you add that isn't in this list still renders (as a plain value
 row in whichever `sections` list it falls under), so you can point it at

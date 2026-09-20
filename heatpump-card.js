@@ -82,9 +82,10 @@ const SECTION_TITLES = {
   dhw: "Hot Water",
   energy: "Energy & Performance",
   status: "Status",
+  visualization: "Visualization",
 };
 
-const SECTION_ORDER = ["temperatures", "dhw", "energy", "status"];
+const SECTION_ORDER = ["temperatures", "dhw", "energy", "status", "visualization"];
 
 // State-name -> accent colour, used for the header badge and the card's
 // left accent bar (loosely mirrors how the Energy dashboard colour-codes
@@ -125,7 +126,7 @@ class HeatpumpCard extends HTMLElement {
         mode: "",
         state: "",
       },
-      sections: ["temperatures", "dhw", "energy", "status"],
+      sections: ["temperatures", "dhw", "energy", "status", "visualization"],
     };
   }
 
@@ -221,7 +222,7 @@ class HeatpumpCard extends HTMLElement {
       wrap.appendChild(h);
       const rows = document.createElement("div");
       rows.className = "hp-rows";
-      if (section === "energy") {
+      if (section === "visualization") {
         const flow = document.createElement("div");
         flow.className = "hp-flow";
         wrap.appendChild(flow);
@@ -239,10 +240,11 @@ class HeatpumpCard extends HTMLElement {
     if (!this._hass) return;
     const entries = this._entries();
 
-    // group by section, preserving config key order within a section
+    // Group by each channel's owning section. Inactive sections do not receive rows.
     const bySection = {};
     for (const e of entries) {
-      const section = this._sections.includes(e.def.section) ? e.def.section : this._sections[0];
+      const section = e.def.section;
+      if (!this._sections.includes(section)) continue;
       (bySection[section] = bySection[section] || []).push(e);
     }
 
@@ -264,12 +266,15 @@ class HeatpumpCard extends HTMLElement {
     this._badgeEl.style.color = accent;
     this._badgeEl.style.borderColor = accent;
     this._cardEl.style.setProperty("--hp-accent", accent);
-    this._renderFlow(entries);
+    this._renderFlow(this._sections.includes("visualization") ? entries : []);
 
     for (const section of this._sections) {
       const { wrap, rows } = this._sectionEls[section];
       const list = bySection[section] || [];
-      wrap.style.display = list.length ? "" : "none";
+      const hasVisualization = section === "visualization"
+        && this._flowEl
+        && this._flowEl.style.display !== "none";
+      wrap.style.display = list.length || hasVisualization ? "" : "none";
       rows.innerHTML = "";
       for (const entry of list) {
         rows.appendChild(this._renderRow(entry));
