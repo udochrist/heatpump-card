@@ -72,6 +72,7 @@ const CHANNELS = {
 
   compressor_speed: { section: "status", label: "Compressor Speed", icon: "mdi:speedometer", type: "percent" },
   mode: { section: "status", label: "Mode", icon: "mdi:cog-outline", type: "text" },
+  valve_position: { section: "status", label: "Valve Position", icon: "mdi:valve", type: "text" },
   state: { section: "status", label: "State", icon: "mdi:information-outline", type: "text", badge: true },
   fault: { section: "status", label: "Fault", icon: "mdi:alert-circle-outline", type: "text" },
 };
