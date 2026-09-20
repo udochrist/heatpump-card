@@ -296,7 +296,10 @@ class HeatpumpCard extends HTMLElement {
       return row;
     }
 
-    const numeric = parseFloat(stateObj.state);
+    const rawValue = cfg.attribute !== undefined
+      ? stateObj.attributes[cfg.attribute]
+      : stateObj.state;
+    const numeric = parseFloat(rawValue);
     const hasNumeric = !Number.isNaN(numeric);
     const unit = cfg.unit || stateObj.attributes.unit_of_measurement || "";
     const decimals = cfg.decimals;

@@ -1,0 +1,45 @@
+# Lovelace card configuration for a Vitocal device from open3e-ha.
+#
+# open3e-ha creates IDs as sensor.<device>_<serial>_<sensor_key>.
+# Replace SERIAL_NUMBER with the serial number shown in Home Assistant.
+# If you renamed the device, replace vitocal with its slugified device name.
+
+type: custom:heatpump-card
+title: Heat Pump
+sections:
+  - temperatures
+  - dhw
+  - energy
+  - status
+
+entities:
+  # Temperatures
+  outdoor_temp: sensor.vitocal_SERIAL_NUMBER_outside_temperature
+  flow_temp: sensor.vitocal_SERIAL_NUMBER_flow_temperature
+  return_temp: sensor.vitocal_SERIAL_NUMBER_return_temperature
+  target_flow_temp: sensor.vitocal_SERIAL_NUMBER_flow_circuit_1_supply_temp_setpoint
+
+  # Domestic hot water
+  dhw_temp: sensor.vitocal_SERIAL_NUMBER_domestic_hot_water_temperature
+  dhw_target_temp:
+    entity: water_heater.vitocal_SERIAL_NUMBER_water_heater
+    attribute: temperature
+    unit: °C
+
+  # Energy and performance
+  compressor_power:
+    entity: sensor.vitocal_SERIAL_NUMBER_power_consumption_refrigerant_circuit
+    max: 8000
+    unit: W
+  heat_output:
+    entity: sensor.vitocal_SERIAL_NUMBER_thermal_power
+    max: 15000
+    unit: W
+  cop: sensor.vitocal_SERIAL_NUMBER_cop_currently
+  energy_today: sensor.vitocal_SERIAL_NUMBER_energy_consumption_total_today
+
+  # Operating status
+  compressor_speed: sensor.vitocal_SERIAL_NUMBER_compressor_speed_percentage
+  mode: sensor.vitocal_SERIAL_NUMBER_refrigeration_circuit_mode
+  state: sensor.vitocal_SERIAL_NUMBER_domestic_hot_water_status
+  fault: sensor.vitocal_SERIAL_NUMBER_error_dtc_list

@@ -63,6 +63,7 @@ entities:
     name: "Custom label"          # optional
     icon: mdi:whatever            # optional
     unit: kW                      # optional override
+    attribute: temperature        # optional HA state attribute instead of state
     max: 3000                     # required for bar/gauge-type channels
     decimals: 1                   # optional
 ```
