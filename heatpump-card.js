@@ -76,6 +76,11 @@ const CHANNELS = {
   valve_position: { section: "status", label: "Valve Position", icon: "mdi:valve", type: "text" },
   state: { section: "status", label: "State", icon: "mdi:information-outline", type: "text", badge: true },
   fault: { section: "status", label: "Fault", icon: "mdi:alert-circle-outline", type: "text" },
+
+  smartgrid_status: { section: "smartgrid", label: "Smart Grid", icon: "mdi:home-battery-outline", type: "text" },
+  aux_heater_max_power: { section: "smartgrid", label: "Heater Max Power", icon: "mdi:flash-alert-outline", type: "value" },
+  aux_heater_smartgrid_lock: { section: "smartgrid", label: "Heater Lock Armed", icon: "mdi:lock-outline", type: "text" },
+  aux_heater_smartgrid_boost: { section: "smartgrid", label: "Heater Boost Armed", icon: "mdi:arrow-up-bold-circle-outline", type: "text" },
 };
 
 const SECTION_TITLES = {
@@ -83,10 +88,11 @@ const SECTION_TITLES = {
   dhw: "Hot Water",
   energy: "Energy & Performance",
   status: "Status",
+  smartgrid: "Smart Grid",
   visualization: "Visualization",
 };
 
-const SECTION_ORDER = ["temperatures", "dhw", "energy", "status", "visualization"];
+const SECTION_ORDER = ["temperatures", "dhw", "energy", "status", "smartgrid", "visualization"];
 
 // State-name -> accent colour, used for the header badge and the card's
 // left accent bar (loosely mirrors how the Energy dashboard colour-codes
@@ -283,6 +289,17 @@ class HeatpumpCard extends HTMLElement {
     }
   }
 
+  // Resolves a config value that may be a literal number or an entity ID
+  // (e.g. a `number.` entity whose state changes at runtime, such as a
+  // smart-grid-adjusted heater power cap) string.
+  _resolveNumber(value, fallback) {
+    if (value === undefined) return fallback;
+    if (typeof value !== "string") return value;
+    const stateObj = this._hass.states[value];
+    const numeric = stateObj ? parseFloat(stateObj.state) : NaN;
+    return Number.isNaN(numeric) ? fallback : numeric;
+  }
+
   _renderRow(entry) {
     const { cfg, def } = entry;
     const stateObj = this._hass.states[cfg.entity];
@@ -326,7 +343,7 @@ class HeatpumpCard extends HTMLElement {
         break;
       }
       case "bar": {
-        const max = cfg.max !== undefined ? cfg.max : (def.max || 100);
+        const max = this._resolveNumber(cfg.max, def.max || 100);
         const pct = hasNumeric && max > 0 ? Math.max(0, Math.min(100, (numeric / max) * 100)) : 0;
         const color = cfg.color || def.color || "var(--hp-accent)";
         valueHtml = `<span class="hp-num">${fmt(numeric, decimals)}</span><span class="hp-unit">${unit}</span>`;

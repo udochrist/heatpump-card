@@ -11,6 +11,7 @@ sections:
   - dhw
   - energy
   - status
+  - smartgrid
   - visualization
 
 entities:
@@ -40,6 +41,11 @@ entities:
     unit: W
   cop: sensor.vitocal_SERIAL_NUMBER_cop_currently
   energy_today: sensor.vitocal_SERIAL_NUMBER_energy_consumption_total_today
+  aux_heater_power:
+    entity: sensor.vitocal_SERIAL_NUMBER_power_consumption_electric_heater
+    # max follows the live cap, which smart-grid features can change at runtime
+    max: number.vitocal_SERIAL_NUMBER_heater_max_power
+    unit: W
   volume_flow:
     entity: sensor.vitocal_SERIAL_NUMBER_allengra_flow_rate
     unit: L/h
@@ -48,3 +54,9 @@ entities:
   valve_position: sensor.vitocal_SERIAL_NUMBER_four_three_way_valve_position
   state: sensor.vitocal_SERIAL_NUMBER_domestic_hot_water_status
   fault: sensor.vitocal_SERIAL_NUMBER_error_dtc_list
+
+  # Smart grid
+  smartgrid_status: sensor.vitocal_SERIAL_NUMBER_smart_grid_ready_consolidator
+  aux_heater_max_power: number.vitocal_SERIAL_NUMBER_heater_max_power
+  aux_heater_smartgrid_lock: sensor.vitocal_SERIAL_NUMBER_heater_smartgrid_min
+  aux_heater_smartgrid_boost: sensor.vitocal_SERIAL_NUMBER_heater_smartgrid_max

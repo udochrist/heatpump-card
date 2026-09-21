@@ -56,7 +56,7 @@ repository**:
 ```yaml
 type: custom:heatpump-card
 title: Heat Pump                  # optional
-sections: [temperatures, dhw, energy, status, visualization]   # optional, default: all five
+sections: [temperatures, dhw, energy, status, smartgrid, visualization]   # optional, default: all six
 state_colors:                     # optional, overrides/extends defaults
   heating: "#e64a19"
   dhw: "#039be5"
@@ -69,7 +69,9 @@ entities:
     icon: mdi:whatever            # optional
     unit: kW                      # optional override
     attribute: temperature        # optional HA state attribute instead of state
-    max: 3000                     # required for bar/gauge-type channels
+    max: 3000                     # required for bar/gauge-type channels — a literal number,
+                                   # or an entity ID (e.g. a `number.` entity) to track a
+                                   # runtime-adjustable cap instead of a fixed value
     decimals: 1                   # optional
 ```
 
@@ -88,6 +90,9 @@ entities:
 | `mode` | energy | plain text |
 | `state` | status | colored pill **and** drives the card's header badge/accent color |
 | `fault` | status | plain text |
+| `smartgrid_status` | smartgrid | plain text (e.g. an enum sensor like open3e-ha's `smart_grid_ready_consolidator`) |
+| `aux_heater_max_power` | smartgrid | plain value — the heater's live power cap, useful alongside a `number.`-entity `max` on `aux_heater_power` |
+| `aux_heater_smartgrid_lock`, `aux_heater_smartgrid_boost` | smartgrid | plain text — whether the smart-grid lock/boost override is currently armed for the auxiliary heater |
 
 The `visualization` section contains the power-flow diagram. It is shown only
 when that section is active and the configured power sensors have numeric data.
