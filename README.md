@@ -12,12 +12,17 @@ the card + this README), so it installs like any other custom card
 instead of being a manual file copy.
 
 The energy section includes a live, Energy-dashboard-style power-flow
-visualization whenever `compressor_power` or `heat_output` is configured. It
-shows electricity and ambient outdoor energy flowing into the heat pump, then
-delivered heat flowing to the home. Flow widths are proportional to the
-readings; ambient energy is estimated as `heat_output - compressor_power`.
-The heat pump is split into compressor and heat exchanger nodes, with the
-`flow_temp` channel shown on the refrigerant flow between them.
+visualization whenever `compressor_power`, `heat_output`, or
+`aux_heater_power` is configured. It shows electricity and ambient outdoor
+energy flowing into the heat pump, then delivered heat flowing to the home.
+Flow widths are proportional to the readings; ambient energy is estimated as
+`heat_output - compressor_power`. The heat pump is split into compressor and
+heat exchanger nodes, with `flow_temp`, `return_temp`, and `volume_flow`
+shown together on the refrigerant loop between them. If your system has a
+supplemental electric heating element (backup/immersion heater), map it to
+`aux_heater_power` and it appears as a third node feeding heat to the home
+alongside the compressor/exchanger path — laid out so none of the nodes
+overlap.
 
 ---
 
@@ -76,6 +81,7 @@ entities:
 | `dhw_temp`, `dhw_target_temp` | dhw | plain °C value |
 | `compressor_power` | energy | bar (needs `max`, watts) |
 | `heat_output` | energy | bar (needs `max`, watts) |
+| `aux_heater_power` | energy | bar (needs `max`, watts) — supplemental electric heating element |
 | `cop` | energy | small gauge, color-coded (red <2, orange 2–3.5, green ≥3.5) |
 | `volume_flow`, `energy_today` | energy | plain value |
 | `compressor_speed` | energy | percent bar |
@@ -108,6 +114,9 @@ entities:
   heat_output:
     entity: sensor.heatpump_heat_output
     max: 8000
+  aux_heater_power:
+    entity: sensor.heatpump_aux_heater_power
+    max: 6000
   cop: sensor.heatpump_cop
   volume_flow: sensor.heatpump_volume_flow
   compressor_speed: sensor.heatpump_compressor_speed
