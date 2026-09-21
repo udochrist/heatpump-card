@@ -143,7 +143,17 @@ type: custom:heatpump-card
 title: Status
 sections: [status]
 entities: *heatpump_entities
+
+---
+type: custom:heatpump-card
+title: Power Flow
+sections: [visualization]
+entities: *heatpump_entities
 ```
+
+Giving the power-flow diagram its own card (`sections: [visualization]`) lets
+it stretch to the card's full width instead of sharing space with the other
+sections — useful if you find it cramped inside the combined card.
 
 (YAML anchors only work if you're editing `ui-lovelace.yaml` / a YAML-mode
 dashboard directly — in the visual editor, just paste the same

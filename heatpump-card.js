@@ -545,7 +545,8 @@ class HeatpumpCard extends HTMLElement {
         text-transform: uppercase;
       }
       .hp-flow-diagram {
-        min-height: 158px;
+        aspect-ratio: 16 / 9;
+        min-height: 220px;
         position: relative;
       }
       .hp-flow-links { height: 100%; left: 0; overflow: visible; position: absolute; top: 0; width: 100%; }
@@ -563,37 +564,37 @@ class HeatpumpCard extends HTMLElement {
         border-radius: 50%;
         display: flex;
         flex-direction: column;
-        gap: 3px;
-        height: 70px;
+        gap: 4px;
+        height: 92px;
         justify-content: center;
-        min-width: 70px;
-        padding: 4px;
+        min-width: 92px;
+        padding: 5px;
         position: absolute;
         text-align: center;
         transform: translate(-50%, -50%);
-        width: 70px;
+        width: 92px;
         z-index: 1;
       }
-      .hp-flow-node ha-icon { color: var(--primary-text-color); --mdc-icon-size: 22px; }
-      .hp-flow-node span { color: var(--primary-text-color); font-size: 10px; line-height: 1.15; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      .hp-flow-node strong { color: var(--secondary-text-color); font-size: 10px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      .hp-flow-node small { color: var(--secondary-text-color); font-size: 9px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .hp-flow-node ha-icon { color: var(--primary-text-color); --mdc-icon-size: 26px; }
+      .hp-flow-node span { color: var(--primary-text-color); font-size: 12px; line-height: 1.15; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .hp-flow-node strong { color: var(--secondary-text-color); font-size: 12px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .hp-flow-node small { color: var(--secondary-text-color); font-size: 10px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .hp-flow-electricity { left: 13%; top: 25%; }
       .hp-flow-outdoor { left: 13%; top: 75%; }
       .hp-flow-compressor { border-color: #ff9800; left: 42%; top: 50%; }
       .hp-flow-exchanger { border-color: #43a047; left: 62%; top: 50%; }
-      .hp-flow-refrigerant-label { background: var(--card-background-color, var(--ha-card-background, #fff)); border-radius: 4px; color: #43a047; font-size: 9px; left: 52%; line-height: 1.15; padding: 2px 4px; position: absolute; text-align: center; top: 28%; transform: translate(-50%, -50%); z-index: 2; }
-      .hp-flow-refrigerant-label strong { font-size: 10px; }
+      .hp-flow-refrigerant-label { background: var(--card-background-color, var(--ha-card-background, #fff)); border-radius: 4px; color: #43a047; font-size: 11px; left: 52%; line-height: 1.15; padding: 3px 5px; position: absolute; text-align: center; top: 28%; transform: translate(-50%, -50%); z-index: 2; }
+      .hp-flow-refrigerant-label strong { font-size: 12px; }
       .hp-flow-muted { color: var(--secondary-text-color); opacity: .7; }
       .hp-flow-heating { left: 87%; top: 25%; }
       @keyframes hp-flow-move { to { stroke-dashoffset: -6; } }
       @media (prefers-reduced-motion: reduce) { .hp-flow-active { animation: none; } }
       @media (max-width: 360px) {
         .hp-flow { padding: 8px 5px; }
-        .hp-flow-diagram { min-height: 145px; }
-        .hp-flow-node { height: 62px; min-width: 62px; width: 62px; }
-        .hp-flow-node span { font-size: 9px; }
-        .hp-flow-node strong { font-size: 10px; }
+        .hp-flow-diagram { min-height: 190px; }
+        .hp-flow-node { height: 78px; min-width: 78px; width: 78px; }
+        .hp-flow-node span { font-size: 10px; }
+        .hp-flow-node strong { font-size: 11px; }
       }
     `;
   }
