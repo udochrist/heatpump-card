@@ -447,23 +447,19 @@ class HeatpumpCard extends HTMLElement {
     const refrigerantWidth = flowTemp || returnTemp || volumeFlow ? 4 : 2;
     const activeClass = (value) => value > 0 ? " hp-flow-active" : "";
     const outputActive = activeClass(heat ? heat.numeric : 0);
-    const homePath = hasDhw
-      ? "M 56 33 C 68 33, 75 35, 83 35"
-      : "M 56 33 C 68 40, 75 50, 83 50";
     this._flowEl.innerHTML = `
       <div class="hp-flow-heading">Power flow</div>
       <div class="hp-flow-diagram">
         <svg class="hp-flow-links" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-          <path class="hp-flow-link hp-flow-electric-link${activeClass(compressor ? compressor.numeric : 0)}" style="--flow-width:${electricWidth}" d="M 17 50 C 28 50, 35 14, 44 14" />
-          ${auxHeater ? `<path class="hp-flow-link hp-flow-aux-input-link${activeClass(auxHeater.numeric)}" style="--flow-width:${auxWidth}" d="M 17 50 C 20 82, 25 82, 28 78" />` : ""}
-          <path class="hp-flow-link hp-flow-ambient-link${activeClass(ambientPower || 0)}" style="--flow-width:${ambientWidth}" d="M 17 12 C 28 12, 35 14, 44 14" />
-          <path class="hp-flow-link hp-flow-refrigerant-link${activeClass(flowTemp ? 1 : 0)}" style="--flow-width:${refrigerantWidth}" d="M 47 19 C 44 23, 44 25, 47 27" />
-          <path class="hp-flow-link hp-flow-return-link${activeClass(returnTemp ? 1 : 0)}" style="--flow-width:${refrigerantWidth}" d="M 53 27 C 56 24, 56 22, 53 19" />
-          <path class="hp-flow-link hp-flow-output-link${outputActive}" style="--flow-width:${outputWidth}" d="M 50 37 C 50 42, 50 44, 50 47" />
-          <path class="hp-flow-link hp-flow-refrigerant-link${outputActive}" style="--flow-width:${outputWidth}" d="M 50 59 C 50 63, 50 65, 50 67" />
-          <path class="hp-flow-link hp-flow-output-link${outputActive}" style="--flow-width:${outputWidth}" d="${homePath}" />
-          ${hasDhw ? `<path class="hp-flow-link hp-flow-dhw-link${outputActive}" style="--flow-width:${outputWidth}" d="M 56 73 C 68 73, 75 70, 83 70" />` : ""}
-          ${auxHeater ? `<path class="hp-flow-link hp-flow-aux-link${activeClass(auxHeater.numeric)}" style="--flow-width:${auxWidth}" d="M 34 78 C 40 70, 43 58, 47 53" />` : ""}
+          <path class="hp-flow-link hp-flow-electric-link${activeClass(compressor ? compressor.numeric : 0)}" style="--flow-width:${electricWidth}" d="M 17 50 C 21 38, 24 30, 26 30" />
+          ${auxHeater ? `<path class="hp-flow-link hp-flow-aux-input-link${activeClass(auxHeater.numeric)}" style="--flow-width:${auxWidth}" d="M 17 50 C 21 62, 24 70, 26 70" />` : ""}
+          <path class="hp-flow-link hp-flow-ambient-link${activeClass(ambientPower || 0)}" style="--flow-width:${ambientWidth}" d="M 17 12 C 21 18, 24 24, 26 30" />
+          <path class="hp-flow-link hp-flow-refrigerant-link${activeClass(flowTemp ? 1 : 0)}" style="--flow-width:${refrigerantWidth}" d="M 34 30 C 39 30, 43 30, 46 30" />
+          <path class="hp-flow-link hp-flow-output-link${outputActive}" style="--flow-width:${outputWidth}" d="M 50 38 C 50 43, 50 47, 50 49" />
+          <path class="hp-flow-link hp-flow-output-link${outputActive}" style="--flow-width:${outputWidth}" d="M 58 30 C 66 30, 75 30, 84 30" />
+          ${auxHeater ? `<path class="hp-flow-link hp-flow-aux-link${activeClass(auxHeater.numeric)}" style="--flow-width:${auxWidth}" d="M 34 70 C 40 64, 44 60, 46 57" />` : ""}
+          ${hasDhw ? `<path class="hp-flow-link hp-flow-dhw-link${outputActive}" style="--flow-width:${outputWidth}" d="M 58 57 C 62 57, 66 57, 66 57" />` : ""}
+          ${hasDhw ? `<path class="hp-flow-link hp-flow-dhw-link${outputActive}" style="--flow-width:${outputWidth}" d="M 78 57 C 84 60, 87 68, 88 75" />` : ""}
         </svg>
         <div class="hp-flow-node hp-flow-electricity">
           <ha-icon icon="mdi:transmission-tower"></ha-icon>
@@ -503,7 +499,7 @@ class HeatpumpCard extends HTMLElement {
           <span>Aux heater</span>
           <strong>${auxHeater.text}</strong>
         </div>` : ""}
-              <div class="hp-flow-node hp-flow-heating"${hasDhw ? ' style="top:35%"' : ""}>
+              <div class="hp-flow-node hp-flow-heating"${hasDhw ? ' style="top:30%"' : ""}>
           <ha-icon icon="mdi:home"></ha-icon>
           <span>Home</span>
         </div>
@@ -619,7 +615,7 @@ class HeatpumpCard extends HTMLElement {
         align-items: center;
         background: var(--card-background-color, var(--ha-card-background, #fff));
         border: 2px solid var(--divider-color, rgba(0,0,0,0.1));
-        border-radius: 50%;
+        border-radius: 10px;
         display: flex;
         flex-direction: column;
         gap: 4px;
@@ -639,16 +635,16 @@ class HeatpumpCard extends HTMLElement {
       .hp-flow-node small { color: var(--secondary-text-color); font-size: 10px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .hp-flow-electricity { left: 10%; top: 50%; }
       .hp-flow-outdoor { left: 10%; top: 12%; }
-      .hp-flow-compressor { border-color: #ff9800; left: 50%; top: 14%; }
-      .hp-flow-buffer { border-color: #43a047; left: 50%; top: 53%; }
-      .hp-flow-aux { border-color: #ab47bc; left: 28%; top: 78%; }
-      .hp-flow-exchanger { border-color: #43a047; border-radius: 12px; height: 52px; min-width: 112px; width: 112px; }
+      .hp-flow-compressor { border-color: #ff9800; left: 30%; top: 30%; }
+      .hp-flow-buffer { border-color: #43a047; left: 50%; top: 57%; }
+      .hp-flow-aux { border-color: #ab47bc; left: 30%; top: 70%; }
+      .hp-flow-exchanger { border-color: #43a047; height: 72px; min-width: 112px; width: 112px; }
       .hp-flow-exchanger ha-icon { --mdc-icon-size: 22px; }
-      .hp-flow-heating-exchanger { left: 50%; top: 32%; }
-      .hp-flow-dhw-exchanger { border-color: #00acc1; left: 50%; top: 73%; }
+      .hp-flow-heating-exchanger { left: 50%; top: 30%; }
+      .hp-flow-dhw-exchanger { border-color: #00acc1; left: 72%; top: 57%; }
       .hp-flow-muted { color: var(--secondary-text-color); opacity: .7; }
-      .hp-flow-heating { left: 90%; top: 50%; }
-      .hp-flow-dhw { border-color: #00acc1; left: 90%; top: 70%; }
+      .hp-flow-heating { left: 90%; top: 30%; }
+      .hp-flow-dhw { border-color: #00acc1; left: 90%; top: 75%; }
       @keyframes hp-flow-move { to { stroke-dashoffset: -6; } }
       @media (prefers-reduced-motion: reduce) { .hp-flow-active { animation: none; } }
       @media (max-width: 360px) {
