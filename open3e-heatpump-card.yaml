@@ -57,6 +57,6 @@ entities:
 
   # Smart grid
   smartgrid_status: sensor.vitocal_SERIAL_NUMBER_smart_grid_ready_consolidator
-  aux_heater_max_power: number.vitocal_SERIAL_NUMBER_heater_max_power
-  aux_heater_smartgrid_lock: sensor.vitocal_SERIAL_NUMBER_heater_smartgrid_min
-  aux_heater_smartgrid_boost: sensor.vitocal_SERIAL_NUMBER_heater_smartgrid_max
+  smartgrid_max_power: number.vitocal_SERIAL_NUMBER_heater_max_power
+  smartgrid_lock: sensor.vitocal_SERIAL_NUMBER_heater_smartgrid_min
+  smartgrid_boost: sensor.vitocal_SERIAL_NUMBER_heater_smartgrid_max
