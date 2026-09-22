@@ -448,20 +448,22 @@ class HeatpumpCard extends HTMLElement {
     const activeClass = (value) => value > 0 ? " hp-flow-active" : "";
     const outputActive = activeClass(heat ? heat.numeric : 0);
     const homePath = hasDhw
-      ? "M 64 47 C 72 42, 78 36, 85 33"
-      : "M 64 48 C 72 46, 78 46, 85 48";
+      ? "M 56 33 C 68 33, 75 35, 83 35"
+      : "M 56 33 C 68 40, 75 50, 83 50";
     this._flowEl.innerHTML = `
       <div class="hp-flow-heading">Power flow</div>
       <div class="hp-flow-diagram">
         <svg class="hp-flow-links" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-          <path class="hp-flow-link hp-flow-electric-link${activeClass(compressor ? compressor.numeric : 0)}" style="--flow-width:${electricWidth}" d="M 17 22 C 24 22, 27 38, 29 46" />
-          ${auxHeater ? `<path class="hp-flow-link hp-flow-aux-input-link${activeClass(auxHeater.numeric)}" style="--flow-width:${auxWidth}" d="M 17 22 C 28 30, 43 64, 56 78" />` : ""}
-                <path class="hp-flow-link hp-flow-ambient-link${activeClass(ambientPower || 0)}" style="--flow-width:${ambientWidth}" d="M 32 18 C 32 28, 32 38, 32 46" />
-          <path class="hp-flow-link hp-flow-refrigerant-link${activeClass(flowTemp ? 1 : 0)}" style="--flow-width:${refrigerantWidth}" d="M 38 47 C 42 47, 46 47, 50 47" />
-          <path class="hp-flow-link hp-flow-return-link${activeClass(returnTemp ? 1 : 0)}" style="--flow-width:${refrigerantWidth}" d="M 50 53 C 46 53, 42 53, 38 53" />
+          <path class="hp-flow-link hp-flow-electric-link${activeClass(compressor ? compressor.numeric : 0)}" style="--flow-width:${electricWidth}" d="M 17 50 C 28 50, 35 14, 44 14" />
+          ${auxHeater ? `<path class="hp-flow-link hp-flow-aux-input-link${activeClass(auxHeater.numeric)}" style="--flow-width:${auxWidth}" d="M 17 50 C 20 82, 25 82, 28 78" />` : ""}
+          <path class="hp-flow-link hp-flow-ambient-link${activeClass(ambientPower || 0)}" style="--flow-width:${ambientWidth}" d="M 17 12 C 28 12, 35 14, 44 14" />
+          <path class="hp-flow-link hp-flow-refrigerant-link${activeClass(flowTemp ? 1 : 0)}" style="--flow-width:${refrigerantWidth}" d="M 47 19 C 44 23, 44 25, 47 27" />
+          <path class="hp-flow-link hp-flow-return-link${activeClass(returnTemp ? 1 : 0)}" style="--flow-width:${refrigerantWidth}" d="M 53 27 C 56 24, 56 22, 53 19" />
+          <path class="hp-flow-link hp-flow-output-link${outputActive}" style="--flow-width:${outputWidth}" d="M 50 37 C 50 42, 50 44, 50 47" />
+          <path class="hp-flow-link hp-flow-refrigerant-link${outputActive}" style="--flow-width:${outputWidth}" d="M 50 59 C 50 63, 50 65, 50 67" />
           <path class="hp-flow-link hp-flow-output-link${outputActive}" style="--flow-width:${outputWidth}" d="${homePath}" />
-          ${hasDhw ? `<path class="hp-flow-link hp-flow-dhw-link${outputActive}" style="--flow-width:${outputWidth}" d="M 64 53 C 72 58, 78 64, 85 67" />` : ""}
-          ${auxHeater ? `<path class="hp-flow-link hp-flow-aux-link${activeClass(auxHeater.numeric)}" style="--flow-width:${auxWidth}" d="M 56 78 C 56 70, 56 64, 56 58" />` : ""}
+          ${hasDhw ? `<path class="hp-flow-link hp-flow-dhw-link${outputActive}" style="--flow-width:${outputWidth}" d="M 56 73 C 68 73, 75 70, 83 70" />` : ""}
+          ${auxHeater ? `<path class="hp-flow-link hp-flow-aux-link${activeClass(auxHeater.numeric)}" style="--flow-width:${auxWidth}" d="M 34 78 C 40 70, 43 58, 47 53" />` : ""}
         </svg>
         <div class="hp-flow-node hp-flow-electricity">
           <ha-icon icon="mdi:transmission-tower"></ha-icon>
@@ -479,23 +481,29 @@ class HeatpumpCard extends HTMLElement {
           <span>Compressor</span>
           <strong>${compressor ? compressor.text : "No reading"}</strong>
         </div>
-        <div class="hp-flow-refrigerant-label${flowTemp || returnTemp || volumeFlow ? "" : " hp-flow-muted"}">
-          Flow <strong>${flowTemp ? flowTemp.text : "--"}</strong><br>
-          Return <strong>${returnTemp ? returnTemp.text : "--"}</strong>
-          ${volumeFlow ? `<br>Rate <strong>${volumeFlow.text}</strong>` : ""}
+        <div class="hp-flow-node hp-flow-exchanger hp-flow-heating-exchanger">
+          <ha-icon icon="mdi:heat-wave"></ha-icon>
+          <span>Heating HX</span>
+          <strong>${flowTemp ? flowTemp.text : "Flow --"}</strong>
+          <small>${returnTemp ? returnTemp.text : "Return --"}${volumeFlow ? ` · ${volumeFlow.text}` : ""}</small>
         </div>
         <div class="hp-flow-node hp-flow-buffer">
           <ha-icon icon="mdi:propane-tank-outline"></ha-icon>
           <span>Buffer</span>
           <strong>${heat ? heat.text : "No reading"}</strong>
         </div>
+        ${hasDhw ? `
+        <div class="hp-flow-node hp-flow-exchanger hp-flow-dhw-exchanger">
+          <ha-icon icon="mdi:water-thermometer"></ha-icon>
+          <span>Hot-water HX</span>
+        </div>` : ""}
         ${auxHeater ? `
         <div class="hp-flow-node hp-flow-aux">
           <ha-icon icon="mdi:heating-coil"></ha-icon>
           <span>Aux heater</span>
           <strong>${auxHeater.text}</strong>
         </div>` : ""}
-        <div class="hp-flow-node hp-flow-heating"${hasDhw ? ' style="top:28%"' : ""}>
+              <div class="hp-flow-node hp-flow-heating"${hasDhw ? ' style="top:35%"' : ""}>
           <ha-icon icon="mdi:home"></ha-icon>
           <span>Home</span>
         </div>
@@ -629,16 +637,18 @@ class HeatpumpCard extends HTMLElement {
       .hp-flow-node span { color: var(--primary-text-color); font-size: 12px; line-height: 1.15; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .hp-flow-node strong { color: var(--secondary-text-color); font-size: 12px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .hp-flow-node small { color: var(--secondary-text-color); font-size: 10px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      .hp-flow-electricity { left: 8%; top: 20%; }
-      .hp-flow-outdoor { left: 32%; top: 10%; }
-      .hp-flow-compressor { border-color: #ff9800; left: 32%; top: 50%; }
-      .hp-flow-buffer { border-color: #43a047; left: 56%; top: 50%; }
-      .hp-flow-aux { border-color: #ab47bc; left: 56%; top: 86%; }
-      .hp-flow-refrigerant-label { background: var(--card-background-color, var(--ha-card-background, #fff)); border-radius: 4px; color: #43a047; font-size: 11px; left: 44%; line-height: 1.15; padding: 3px 5px; position: absolute; text-align: center; top: 30%; transform: translate(-50%, -50%); z-index: 2; }
-      .hp-flow-refrigerant-label strong { font-size: 12px; }
+      .hp-flow-electricity { left: 10%; top: 50%; }
+      .hp-flow-outdoor { left: 10%; top: 12%; }
+      .hp-flow-compressor { border-color: #ff9800; left: 50%; top: 14%; }
+      .hp-flow-buffer { border-color: #43a047; left: 50%; top: 53%; }
+      .hp-flow-aux { border-color: #ab47bc; left: 28%; top: 78%; }
+      .hp-flow-exchanger { border-color: #43a047; border-radius: 12px; height: 52px; min-width: 112px; width: 112px; }
+      .hp-flow-exchanger ha-icon { --mdc-icon-size: 22px; }
+      .hp-flow-heating-exchanger { left: 50%; top: 32%; }
+      .hp-flow-dhw-exchanger { border-color: #00acc1; left: 50%; top: 73%; }
       .hp-flow-muted { color: var(--secondary-text-color); opacity: .7; }
-      .hp-flow-heating { left: 88%; top: 50%; }
-      .hp-flow-dhw { border-color: #00acc1; left: 88%; top: 72%; }
+      .hp-flow-heating { left: 90%; top: 50%; }
+      .hp-flow-dhw { border-color: #00acc1; left: 90%; top: 70%; }
       @keyframes hp-flow-move { to { stroke-dashoffset: -6; } }
       @media (prefers-reduced-motion: reduce) { .hp-flow-active { animation: none; } }
       @media (max-width: 360px) {

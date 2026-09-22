@@ -14,17 +14,19 @@ instead of being a manual file copy.
 The energy section includes a live, Energy-dashboard-style power-flow
 visualization whenever `compressor_power`, `heat_output`, or
 `aux_heater_power` is configured. It shows energy from the available source
-flowing into the compressor and auxiliary heater, then into a shared buffer, matching
-systems where a buffer tank stores the heated water and both central heating
-and DHW are drawn from it via heat exchange rather than heated directly.
+flowing into the compressor and auxiliary heater. The diagram shows a heating
+heat exchanger between the compressor and buffer, with a branch to Home, and a
+separate hot-water heat exchanger between the buffer and Hot water. This
+matches systems where a buffer tank stores the heated water and both central
+heating and DHW are drawn from it via heat exchange rather than heated directly.
 Flow widths are proportional to the readings; ambient energy is estimated as
 `heat_output - compressor_power`. `flow_temp`, `return_temp`, and
-`volume_flow` are shown together on the refrigerant loop between compressor
-and buffer. If your system has a supplemental electric heating element
+`volume_flow` are shown in the heating heat exchanger. If your system has a
+supplemental electric heating element
 (backup/immersion heater), map it to `aux_heater_power` and it appears as a
 node feeding the buffer alongside the compressor. If `dhw_temp` is
-configured, the buffer splits into two outputs — Home and Hot water —
-instead of one combined node; otherwise it stays a single "Home" output.
+configured, the buffer feeds the hot-water heat exchanger as well as the
+heating side; otherwise it stays a single "Home" output.
 Nodes are laid out so none of them overlap.
 
 ---
